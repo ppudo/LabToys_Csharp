@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace LabToys.DeltaElektronika
 {
-    class PSC_ETH
+    public class PSC_ETH
     {
-        private SCPI device = null;
+        private SCPIsocket device = null;
 
         //-------------------------------------------------------------------------------------------------------------------------------------------
         /// <summary>
@@ -17,28 +17,10 @@ namespace LabToys.DeltaElektronika
         /// </summary>
         /// <param name="ip"></param>
         /// <param name="port"></param>
-        public PSC_ETH(string ip, ushort port = 8462)
+        public PSC_ETH(string ip = "10.1.0.101", ushort port = 8462)
         {
-            device = new SCPI(ip, port);
-        }
-
-        //-----------------------------------------------------------------------------------------
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="timeout"></param>
-        public void Connect(int timeout = 2000)
-        {
-            device.Connect(timeout);
-        }
-
-        //-----------------------------------------------------------------------------------------
-        /// <summary>
-        /// 
-        /// </summary>
-        public void Close()
-        {
-            device.Close();
+            device = new SCPIsocket(ip, port);
+            device.Timeout = 2000;
         }
 
         #region GENERAL_INSTRUCTIONS
@@ -57,6 +39,7 @@ namespace LabToys.DeltaElektronika
         public string[] GetIDN()
         {
             string ans = device.SendCommandGetAns("*IDN?");
+            if (ans.Length == 0) return new string[0];
             string[] idn = ans.Split(',');
             return idn;
         }
@@ -66,13 +49,13 @@ namespace LabToys.DeltaElektronika
         /// *PUD
         /// </summary>
         /// <param name="info"></param>
-        public void SetProtectedUserData(string info)
+        public bool SetProtectedUserData(string info)
         {
             if (info.Length > 72)
             {
                 info = info.Remove(0, 72);
             }
-            device.SendCommand("*PUD " + info);
+            return device.SendCommand("*PUD " + info);
         }
 
         //-----------------------------------------------------------------------------------------
@@ -83,6 +66,7 @@ namespace LabToys.DeltaElektronika
         public string GetProtectedUserData()
         {
             string ans = device.SendCommandGetAns("*PUD?");
+            if (ans.Length == 0) return "";
             return ans;
         }
 
@@ -91,15 +75,15 @@ namespace LabToys.DeltaElektronika
         /// *SAV
         /// </summary>
         /// <param name="password"></param>
-        public void SaveSettings(string password = "")
+        public bool SaveSettings(string password = "")
         {
             if (password.Length > 0)
             {
-                device.SendCommand("*SAV " + password);
+                return device.SendCommand("*SAV " + password);
             }
             else
             {
-                device.SendCommand("*SAV");
+                return device.SendCommand("*SAV");
             }
         }
 
@@ -107,18 +91,18 @@ namespace LabToys.DeltaElektronika
         /// <summary>
         /// *RST
         /// </summary>
-        public void RestoreToDefaultState()
+        public bool RestoreToDefaultState()
         {
-            device.SendCommand("*RST");
+            return device.SendCommand("*RST");
         }
 
         //-----------------------------------------------------------------------------------------
         /// <summary>
         /// *RCL
         /// </summary>
-        public void RecallCalibration()
+        public bool RecallCalibration()
         {
-            device.SendCommand("*RCL");
+            return device.SendCommand("*RCL");
         }
         #endregion
 
@@ -135,9 +119,9 @@ namespace LabToys.DeltaElektronika
         /// SOURce:VOLTage:MAXimum
         /// </summary>
         /// <param name="max"></param>
-        public void SetOutputMaxVoltage(float max)
+        public bool SetOutputMaxVoltage(float max)
         {
-            device.SendCommand("SOUR:VOLT:MAX " + max.ToString("0.0000"));
+            return device.SendCommand("SOUR:VOLT:MAX " + max.ToString("0.0000"));
         }
 
         //-----------------------------------------------------------------------------------------
@@ -148,7 +132,15 @@ namespace LabToys.DeltaElektronika
         public float GetOutputMaxVoltage()
         {
             string ans = device.SendCommandGetAns("SOUR:VOLT:MAX?");
-            return float.Parse(ans);
+            if (ans.Length == 0) return float.NaN;
+            if (float.TryParse(ans, out float value))
+            {
+                return value;
+            }
+            else
+            {
+                return float.NaN;
+            }
         }
 
         //-----------------------------------------------------------------------------------------
@@ -156,9 +148,9 @@ namespace LabToys.DeltaElektronika
         /// SOURce:CURRent:MAXimum
         /// </summary>
         /// <param name="max"></param>
-        public void SetOutputMaxCurrent(float max)
+        public bool SetOutputMaxCurrent(float max)
         {
-            device.SendCommand("SOUR:CURR:MAX " + max.ToString("0.0000"));
+            return device.SendCommand("SOUR:CURR:MAX " + max.ToString("0.0000"));
         }
 
         //-----------------------------------------------------------------------------------------
@@ -169,7 +161,15 @@ namespace LabToys.DeltaElektronika
         public float GetOutputMaxCurrent()
         {
             string ans = device.SendCommandGetAns("SOUR:CURR:MAX?");
-            return float.Parse(ans);
+            if (ans.Length == 0) return float.NaN;
+            if (float.TryParse(ans, out float value))
+            {
+                return value;
+            }
+            else
+            {
+                return float.NaN;
+            }
         }
 
         //-----------------------------------------------------------------------------------------
@@ -177,9 +177,9 @@ namespace LabToys.DeltaElektronika
         /// SOURce:VOLTage
         /// </summary>
         /// <param name="voltage"></param>
-        public void SetOutputVoltage(float voltage)
+        public bool SetOutputVoltage(float voltage)
         {
-            device.SendCommand("SOUR:VOLT " + voltage.ToString("0.0000"));
+            return device.SendCommand("SOUR:VOLT " + voltage.ToString("0.0000"));
         }
 
         //-----------------------------------------------------------------------------------------
@@ -190,7 +190,15 @@ namespace LabToys.DeltaElektronika
         public float GetOutputVoltage()
         {
             string ans = device.SendCommandGetAns("SOUR:VOLT?");
-            return float.Parse(ans);
+            if (ans.Length == 0) return float.NaN;
+            if (float.TryParse(ans, out float value))
+            {
+                return value;
+            }
+            else
+            {
+                return float.NaN;
+            }
         }
 
         //-----------------------------------------------------------------------------------------
@@ -198,9 +206,9 @@ namespace LabToys.DeltaElektronika
         /// SOURce:CURRent
         /// </summary>
         /// <param name="current"></param>
-        public void SetOutputCurrent(float current)
+        public bool SetOutputCurrent(float current)
         {
-            device.SendCommand("SOUR:CURR " + current.ToString("0.0000"));
+            return device.SendCommand("SOUR:CURR " + current.ToString("0.0000"));
         }
 
         //-----------------------------------------------------------------------------------------
@@ -211,7 +219,15 @@ namespace LabToys.DeltaElektronika
         public float GetOutputCurrent()
         {
             string ans = device.SendCommandGetAns("SOUR:CURR?");
-            return float.Parse(ans);
+            if (ans.Length == 0) return float.NaN;
+            if (float.TryParse(ans, out float value))
+            {
+                return value;
+            }
+            else
+            {
+                return float.NaN;
+            }
         }
         #endregion
 
@@ -231,7 +247,15 @@ namespace LabToys.DeltaElektronika
         public float MeasureOutputVoltage()
         {
             string ans = device.SendCommandGetAns("MEAS:VOLT?");
-            return float.Parse(ans);
+            if (ans.Length == 0) return float.NaN;
+            if (float.TryParse(ans, out float value))
+            {
+                return value;
+            }
+            else
+            {
+                return float.NaN;
+            }
         }
 
         //-----------------------------------------------------------------------------------------
@@ -242,7 +266,15 @@ namespace LabToys.DeltaElektronika
         public float MeasureOutputCurrent()
         {
             string ans = device.SendCommandGetAns("MEAS:CURR?");
-            return float.Parse(ans);
+            if (ans.Length == 0) return float.NaN;
+            if (float.TryParse(ans, out float value))
+            {
+                return value;
+            }
+            else
+            {
+                return float.NaN;
+            }
         }
 
         //-----------------------------------------------------------------------------------------
@@ -271,9 +303,10 @@ namespace LabToys.DeltaElektronika
         /// UOUTput
         /// </summary>
         /// <param name="outputs"></param>
-        public void SetDigitalOutputs(byte outputs)
+        public bool SetDigitalOutputs(int outputs)
         {
-            device.SendCommand("UOUT " + outputs.ToString());
+            outputs = outputs & 0x3F;
+            return device.SendCommand("UOUT " + outputs.ToString());
         }
 
         //-----------------------------------------------------------------------------------------
@@ -281,10 +314,18 @@ namespace LabToys.DeltaElektronika
         /// UOUTput?
         /// </summary>
         /// <returns></returns>
-        public byte GetDigitalOutputs()
+        public int GetDigitalOutputs()
         {
             string ans = device.SendCommandGetAns("UOUT?");
-            return byte.Parse(ans);
+            if (ans.Length == 0) return int.MinValue;
+            if (int.TryParse(ans, out int value))
+            {
+                return value;
+            }
+            else
+            {
+                return int.MinValue;
+            }
         }
 
         //-----------------------------------------------------------------------------------------
@@ -292,10 +333,18 @@ namespace LabToys.DeltaElektronika
         /// UINPut:CONDition?
         /// </summary>
         /// <returns></returns>
-        public byte GetDigitalInputs()
+        public int GetDigitalInputs()
         {
             string ans = device.SendCommandGetAns("UINP:COND?");
-            return byte.Parse(ans);
+            if (ans.Length == 0) return int.MinValue;
+            if (int.TryParse(ans, out int value))
+            {
+                return value;
+            }
+            else
+            {
+                return int.MinValue;
+            }
         }
         #endregion
 
@@ -311,18 +360,18 @@ namespace LabToys.DeltaElektronika
         /// <summary>
         /// SYSTem:FRONtpanel[:STATus] 1 or ON
         /// </summary>
-        public void LockFrontPanel()
+        public bool LockFrontPanel()
         {
-            device.SendCommand("SYST:FRON 1");
+            return device.SendCommand("SYST:FRON 1");
         }
 
         //-----------------------------------------------------------------------------------------
         /// <summary>
         /// SYSTem:FRONtpanel[:STATus] 0 or OFF
         /// </summary>
-        public void UnlockFrontPanel()
+        public bool UnlockFrontPanel()
         {
-            device.SendCommand("SYST:FRON 0");
+            return device.SendCommand("SYST:FRON 0");
         }
 
         //-----------------------------------------------------------------------------------------
@@ -333,12 +382,15 @@ namespace LabToys.DeltaElektronika
         public bool GetFrontPanelLockStatus()
         {
             string ans = device.SendCommandGetAns("SYST:FRON?");
-            int ansInt = int.Parse(ans);
-            if (ansInt == 0)
+            if (ans.Length == 0) return false;
+            if (ans == "1")
+            {
+                return true;
+            }
+            else
             {
                 return false;
             }
-            return true;
         }
         #endregion
 
@@ -354,18 +406,18 @@ namespace LabToys.DeltaElektronika
         /// <summary>
         /// OUTPut
         /// </summary>
-        public void EnableOutput()
+        public bool EnableOutput()
         {
-            device.SendCommand("OUTP 1");
+            return device.SendCommand("OUTP 1");
         }
 
         //-----------------------------------------------------------------------------------------
         /// <summary>
         /// OUTPut
         /// </summary>
-        public void DisableOutput()
+        public bool DisableOutput()
         {
-            device.SendCommand("OUTP 0");
+            return device.SendCommand("OUTP 0");
         }
 
         //-----------------------------------------------------------------------------------------
@@ -376,12 +428,15 @@ namespace LabToys.DeltaElektronika
         public bool GetOutputStatus()
         {
             string ans = device.SendCommandGetAns("OUTP?");
-            int ansInt = int.Parse(ans);
-            if (ansInt == 0)
+            if (ans.Length == 0) return false;
+            if (ans == "1")
+            {
+                return true;
+            }
+            else
             {
                 return false;
             }
-            return true;
         }
         #endregion
 
@@ -394,6 +449,200 @@ namespace LabToys.DeltaElektronika
         //   SSS  EEEEE  QQQ   UUU  EEEEE N   N  CCC  EEEEE R  R
         //                 Q
 
+        /// <summary>
+        /// PROGram:CATalog
+        /// </summary>
+        /// <returns></returns>
+        public string[] GetSequenceCatalog()
+        {
+            string ans = device.SendCommandGetAns("PROG:CAT?");
+            if (ans.Length == 0) return new string[0];
+            string[] catalog = ans.Split(',');
+            return catalog;
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// PROGram:SELected:NAME
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public bool SelectSequence(string name)
+        {
+            if (name.Length > 16)
+            {
+                name = name.Substring(0, 16);
+            }
+            return device.SendCommand("PROG:SEL:NAME " + name);
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// PROGram:SELected:NAME
+        /// </summary>
+        /// <returns></returns>
+        public string GetSelectedSequenceName()
+        {
+            string ans = device.SendCommandGetAns("PROG:SEL:NAME?");
+            if (ans.Length == 0) return "";
+            return ans;
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// PROGram:SELected:STEP
+        /// </summary>
+        /// <param name="stepNo"></param>
+        /// <returns></returns>
+        public string GetSequenceStep(int stepNo)
+        {
+            if (stepNo <= 2000 && stepNo >= 1)
+            {
+                string ans = device.SendCommandGetAns("PROG:SEL:STEP " + stepNo.ToString() + "?");
+                if (ans.Length == 0) return "";
+                int idx = ans.IndexOf(' ');
+                if (idx == -1) return "";
+                return ans.Substring(idx + 1);
+            }
+            else
+            {
+                return "";
+            }
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public string[] GetCompleteSequence()
+        {
+            int idx = 1;
+            string step = "";
+            string[] steps = new string[2000];
+            if (device.Connect() == false) return new string[0];
+            while (step != "END")
+            {
+                step = GetSequenceStep(idx);
+                if (step.Length > 0)
+                {
+                    break;
+                }
+                steps[idx - 1] = step;
+                idx++;
+            }
+            device.Close();
+            Array.Resize(ref steps, idx - 1);
+            return steps;
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// PROGram:SELected:DELete
+        /// </summary>
+        /// <returns></returns>
+        public bool DeleteSelectedSequence()
+        {
+            return device.SendCommand("PROG:SEL:DEL");
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// PROGram:SELected:STATe RUN
+        /// </summary>
+        /// <returns></returns>
+        public bool StartSequence()
+        {
+            return device.SendCommand("PROG:SEL:STAT RUN");
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// PROGram:SELected:STATe PAUSe
+        /// </summary>
+        /// <returns></returns>
+        public bool PauseSequence()
+        {
+            return device.SendCommand("PROG:SEL:STAT PAUS");
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// PROGram:SELected:STATe CONTinue
+        /// </summary>
+        /// <returns></returns>
+        public bool ContinueSequence()
+        {
+            return device.SendCommand("PROG:SEL:STAT CONT");
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// PROGram:SELected:STATe NEXT
+        /// </summary>
+        /// <returns></returns>
+        public bool NextStep()
+        {
+            return device.SendCommand("PROG:SEL:STAT NEXT");
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// PROGram:SELected:STATe STOP
+        /// </summary>
+        /// <returns></returns>
+        public bool StopSequence()
+        {
+            return device.SendCommand("PROG:SEL:STAT STOP");
+        }
+
+        //-----------------------------------------------------------------------------------------
+        public class SequenceStatus
+        {
+            private SequenceState state = SequenceState.ERROR;
+            private int idx = 0;
+
+            public SequenceState State { get => state; }
+            public int Idx { get => idx; }
+
+            public SequenceStatus(string status)
+            {
+                if (status.Contains("STOP") == true)
+                {
+                    state = SequenceState.STOP;
+                }
+                else if (status.Contains("PAUSE") == true)
+                {
+                    state = SequenceState.PAUSE;
+                    idx = int.Parse(status.Substring("PAUSE".Length + 1));
+                }
+                else if (status.Contains("RUN") == true)
+                {
+                    state = SequenceState.RUN;
+                    idx = int.Parse(status.Substring("RUN".Length + 1));
+                }
+            }
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// PROGram:SELected:STATe
+        /// </summary>
+        /// <returns></returns>
+        public SequenceStatus GetSequenceStatus()
+        {
+            return new SequenceStatus(device.SendCommandGetAns("PROG:SEL:STAT?"));
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// TRIGger:IMMediate
+        /// </summary>
+        /// <returns></returns>
+        public bool TriggerStep()
+        {
+            return device.SendCommand("TRIG:IMM");
+        }
         #endregion
 
         #region ENUM
@@ -427,6 +676,16 @@ namespace LabToys.DeltaElektronika
             INPUT_G = 0x40,
             INPUT_H = 0x80
         }
+
+        //-----------------------------------------------------------------------------------------
+        public enum SequenceState
+        {
+            STOP,
+            PAUSE,
+            RUN,
+            ERROR
+        }
+
         #endregion
     }
 }

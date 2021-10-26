@@ -10,7 +10,7 @@ namespace LabToys.Rigol
 {
     public class DS1000Z
     {
-        private SCPI device = null;
+        private SCPIsocket device = null;
 
         //-------------------------------------------------------------------------------------------------------------------------------------------
         /// <summary>
@@ -20,26 +20,8 @@ namespace LabToys.Rigol
         /// <param name="port"></param>
         public DS1000Z(string ip, ushort port = 5555)
         {
-            device = new SCPI(ip, port);
-        }
-
-        //-----------------------------------------------------------------------------------------
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="timeout"></param>
-        public void Connect(int timeout = 10000)
-        {
-            device.Connect(timeout);
-        }
-
-        //-----------------------------------------------------------------------------------------
-        /// <summary>
-        /// 
-        /// </summary>
-        public void Close()
-        {
-            device.Close();
+            device = new SCPIsocket(ip, port);
+            device.Timeout = 10000;
         }
 
         #region BASIC_COMMANDS
@@ -54,54 +36,54 @@ namespace LabToys.Rigol
         /// <summary>
         /// AUTOscale
         /// </summary>
-        public void Autoscale()
+        public bool Autoscale()
         {
-            device.SendCommand("AUT");
+            return device.SendCommand("AUT");
         }
 
         //-----------------------------------------------------------------------------------------
         /// <summary>
         /// CLEar
         /// </summary>
-        public void Clear()
+        public bool Clear()
         {
-            device.SendCommand("CLE");
+            return device.SendCommand("CLE");
         }
 
         //-----------------------------------------------------------------------------------------
         /// <summary>
         /// RUN
         /// </summary>
-        public void Run()
+        public bool Run()
         {
-            device.SendCommand("RUN");
+            return device.SendCommand("RUN");
         }
 
         //-----------------------------------------------------------------------------------------
         /// <summary>
         /// STOP
         /// </summary>
-        public void Stop()
+        public bool Stop()
         {
-            device.SendCommand("STOP");
+            return device.SendCommand("STOP");
         }
 
         //-----------------------------------------------------------------------------------------
         /// <summary>
         /// SINGLE
         /// </summary>
-        public void Single()
+        public bool Single()
         {
-            device.SendCommand("SINGLE");
+            return device.SendCommand("SINGLE");
         }
 
         //-----------------------------------------------------------------------------------------
         /// <summary>
         /// TFORce
         /// </summary>
-        public void TriggerForce()
+        public bool TriggerForce()
         {
-            device.SendCommand("TFOR");
+            return device.SendCommand("TFOR");
         }
         #endregion
 
@@ -117,9 +99,9 @@ namespace LabToys.Rigol
         /// <summary>
         /// DISPlay:CLEar
         /// </summary>
-        public void ClearDisplay()
+        public bool ClearDisplay()
         {
-            device.SendCommand("DISP:CLE");
+            return device.SendCommand("DISP:CLE");
         }
 
         //-----------------------------------------------------------------------------------------
@@ -130,10 +112,15 @@ namespace LabToys.Rigol
         /// <returns></returns>
         public byte[] GetScreenDataBitmap()
         {
-            device.SendCommand("DISP:DATA?");
+            if (device.Connect() == false) return new byte[0];
+            if (device.SendCommand("DISP:DATA?") == false) return new byte[0];
             string header = device.GetAns(2);                                                       //get begin of header #x - where x is length of rest of header
+            if (header.Length == 0) return new byte[0];
+
             int headerLen = header[1] - '0';                                                          //convert string to int
-            int length = int.Parse(device.GetAns(headerLen)) + 1;                                   //get rest of heder info - this is length of bytes in stream with screen data +ending \n
+            header = device.GetAns(headerLen);
+            if (header.Length == 0) return new byte[0];
+            int length = int.Parse(header) + 1;                                                     //get rest of heder info - this is length of bytes in stream with screen data +ending \n
 
             //get rest of stream data, loop reads data to end of stream in packet
             byte[] screenData = new byte[length];
@@ -141,6 +128,7 @@ namespace LabToys.Rigol
             while (receivedBytes < length)
             {
                 byte[] data = device.GetRaw(length - receivedBytes);
+                if (data.Length == 0) return new byte[0];
                 Array.Copy(data, 0, screenData, receivedBytes, data.Length);
                 receivedBytes += data.Length;
             }
@@ -150,18 +138,30 @@ namespace LabToys.Rigol
         }
 
         //-----------------------------------------------------------------------------------------
-        public void SaveScreenToImage(string path, ImageFormat format = ImageFormat.BITMAP)
+        public bool SaveScreenToImage(string path, ImageFormat format = ImageFormat.BITMAP)
         {
+            //receive data from scope
             byte[] bitmap = GetScreenDataBitmap();
-            FileStream file = File.Create(path);
+            if (bitmap.Length == 0) return false;
 
-            if (format != ImageFormat.BITMAP)
+            //save to file
+            try
             {
-                //TO DO
+                FileStream file = File.Create(path);
+                if (format != ImageFormat.BITMAP)
+                {
+                    //TO DO
+                }
+
+                file.Write(bitmap, 0, bitmap.Length);
+                file.Close();
+            }
+            catch
+            {
+                return false;
             }
 
-            file.Write(bitmap, 0, bitmap.Length);
-            file.Close();
+            return true;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -169,17 +169,18 @@ namespace LabToys.Rigol
         /// DISPlay:TYPE
         /// </summary>
         /// <param name="type"></param>
-        public void SetDisplayType(DisplayType type = DisplayType.VECTORS)
+        public bool SetDisplayType(DisplayType type = DisplayType.VECTORS)
         {
-            device.SendCommand("DISP:TYPE " + DisplayTypeString[(int)type]);
+            return device.SendCommand("DISP:TYPE " + DisplayTypeString[(int)type]);
         }
 
         //-----------------------------------------------------------------------------------------
         public DisplayType GetDisplayType()
         {
             string ans = device.SendCommandGetAns("DISP:TYPE?");
+            if (ans.Length == 0) return DisplayType.ERROR;
             int i = 0;
-            for (i = 0; i < DisplayTypeString.Length; i++)
+            for (i = 0; i < DisplayTypeString.Length - 1; i++)
             {
                 if (ans == DisplayTypeString[i])
                 {
@@ -193,11 +194,11 @@ namespace LabToys.Rigol
 
         #region IEEE488_2_COMMON_COMMANDS
         //-------------------------------------------------------------------------------------------------------------------------------------------
-        //  III EEEEE EEEEE EEEEE    4   888   888     222         CCC   OOO  M   M M   M  OOO  N   N
-        //   I  E     E     E       44  8   8 8   8   2   2       C   C O   O MM MM MM MM O   O NN  N
-        //   I  EEE   EEE   EEE    4 4   888   888       2        C     O   O M M M M M M O   O N N N
-        //   I  E     E     E     44444 8   8 8   8    22         C   C O   O M   M M   M O   O N  NN
-        //  III EEEEE EEEEE EEEEE    4   888   888  # 22222        CCC   OOO  M   M M   M  OOO  N   N
+        //  III EEEEE EEEEE EEEEE    4   888   888     222         CCC   OOO  M   M M   M  OOO  N   N        CCC   OOO  M   M M   M   A   N   N DDDD   SSS
+        //   I  E     E     E       44  8   8 8   8   2   2       C   C O   O MM MM MM MM O   O NN  N       C   C O   O MM MM MM MM  A A  NN  N D   D S
+        //   I  EEE   EEE   EEE    4 4   888   888       2        C     O   O M M M M M M O   O N N N       C     O   O M M M M M M A   A N N N D   D  SSS
+        //   I  E     E     E     44444 8   8 8   8    22         C   C O   O M   M M   M O   O N  NN       C   C O   O M   M M   M AAAAA N  NN D   D     S
+        //  III EEEEE EEEEE EEEEE    4   888   888  # 22222        CCC   OOO  M   M M   M  OOO  N   N        CCC   OOO  M   M M   M A   A N   N DDDD   SSS
         //
 
         /// <summary>
@@ -207,6 +208,7 @@ namespace LabToys.Rigol
         public string[] GetIDN()
         {
             string ans = device.SendCommandGetAns("*IDN?");
+            if (ans.Length == 0) return new string[0];
             string[] idn = ans.Split(',');
             return idn;
         }
@@ -215,18 +217,18 @@ namespace LabToys.Rigol
         /// <summary>
         /// *CLS
         /// </summary>
-        public void ClearStatus()
+        public bool ClearStatus()
         {
-            device.SendCommand("*CLS");
+            return device.SendCommand("*CLS");
         }
 
         //-----------------------------------------------------------------------------------------
         /// <summary>
         /// *OPC
         /// </summary>
-        public void EnableOperationComplete()
+        public bool EnableOperationComplete()
         {
-            device.SendCommand("*OPC");
+            return device.SendCommand("*OPC");
         }
 
         //-----------------------------------------------------------------------------------------
@@ -237,11 +239,12 @@ namespace LabToys.Rigol
         public bool IsOperationComplete()
         {
             string ans = device.SendCommandGetAns("*OPC?");
+            if (ans.Length == 0) return false;
+
             if (ans == "1")
             {
                 return true;
             }
-
             return false;
         }
 
@@ -249,9 +252,9 @@ namespace LabToys.Rigol
         /// <summary>
         /// *RST
         /// </summary>
-        public void RestoreToDefaultState()
+        public bool RestoreToDefaultState()
         {
-            device.SendCommand("*RST");
+            return device.SendCommand("*RST");
         }
 
         //-----------------------------------------------------------------------------------------
@@ -262,6 +265,7 @@ namespace LabToys.Rigol
         public int SelfTest()
         {
             string ans = device.SendCommandGetAns("*TST?");
+            if (ans == null) return int.MinValue;
             return int.Parse(ans);
         }
         #endregion
@@ -277,23 +281,25 @@ namespace LabToys.Rigol
 
         public enum ImageFormat
         {
-            BITMAP,
-            JPG,
-            PNG
+            BITMAP
+            //JPG,
+            //PNG
         }
 
         //-----------------------------------------------------------------------------------------
         public enum DisplayType
         {
             VECTORS,
-            DOTS
+            DOTS,
+            ERROR
         }
 
         //---------------------------------------
         private readonly string[] DisplayTypeString = new string[]
         {
             "VECT",
-            "DOTS"
+            "DOTS",
+            "VECT"
         };
         #endregion
     }

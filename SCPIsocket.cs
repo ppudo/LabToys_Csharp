@@ -5,6 +5,7 @@ using System.Net.Configuration;
 using System.Text;
 using System.Threading.Tasks;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace LabToys
 {
@@ -14,10 +15,12 @@ namespace LabToys
         private int hostPort = 5025;
         private bool stayConnected = false;
         private int timeout = 10000;
+        private int sendDelay = 1;
         private TcpClient deviceSocket = null;
         private NetworkStream deviceStream = null;
 
         public int Timeout { get => timeout; set => timeout = value; }
+        public int SendDelay { get => sendDelay; set => sendDelay = value; }
 
         //-------------------------------------------------------------------------------------------------------------------------------------------
         /// <summary>
@@ -85,6 +88,7 @@ namespace LabToys
             try
             {
                 deviceStream.Write(data, 0, data.Length);
+                Thread.Sleep(this.sendDelay);
                 if (stayConnected == false
                     && this.stayConnected == false)
                 {

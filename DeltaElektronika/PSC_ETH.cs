@@ -457,7 +457,7 @@ namespace LabToys.DeltaElektronika
         {
             string ans = device.SendCommandGetAns("PROG:CAT?");
             if (ans.Length == 0) return new string[0];
-            string[] catalog = ans.Split(',');
+            string[] catalog = ans.Split('\n');
             return catalog;
         }
 
@@ -521,10 +521,10 @@ namespace LabToys.DeltaElektronika
             string step = "";
             string[] steps = new string[2000];
             if (device.Connect() == false) return new string[0];
-            while (step != "END")
+            while (step != "END\n")
             {
                 step = GetSequenceStep(idx);
-                if (step.Length > 0)
+                if (step.Length == 0)
                 {
                     break;
                 }

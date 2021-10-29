@@ -512,6 +512,25 @@ namespace LabToys.DeltaElektronika
 
         //-----------------------------------------------------------------------------------------
         /// <summary>
+        /// #PROGram:SELected:STEP
+        /// </summary>
+        /// <param name="stepNo"></param>
+        /// <param name="step"></param>
+        /// <returns></returns>
+        public bool SetSequenceStep( int stepNo, string step )
+        {
+            if( stepNo <= 2000 && stepNo >= 1 )
+            {
+                return device.SendCommand("PROG:SEL:STEP " + stepNo.ToString() + " " + step);
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
@@ -528,7 +547,7 @@ namespace LabToys.DeltaElektronika
                 {
                     break;
                 }
-                steps[idx - 1] = step;
+                steps[idx - 1] = step.Substring(0, step.Length - 1);
                 idx++;
             }
             device.Close();
@@ -642,6 +661,26 @@ namespace LabToys.DeltaElektronika
         public bool TriggerStep()
         {
             return device.SendCommand("TRIG:IMM");
+        }
+
+        //-----------------------------------------------------------------------------------------
+        public bool SendSequence( string name, string[] steps )
+        {
+            if (device.Connect() == false) return false;
+
+            //delete current sequence with the same name
+            if (SelectSequence(name) == false) return false;
+            if (DeleteSelectedSequence() == false) return false;
+
+            //select sequence again and upload new sequence
+            if (SelectSequence(name) == false) return false;
+            for( int i=0; i<steps.Length; i++ )
+            {
+                if (SetSequenceStep(i + 1, steps[i]) == false) return false;
+            }
+
+            device.Close();
+            return true;
         }
         #endregion
 

@@ -392,6 +392,135 @@ namespace LabToys.DeltaElektronika
                 return false;
             }
         }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// SYSTem:REMote[:STATus] REMote
+        /// SYSTem:REMote[:STATus] LOCal
+        /// </summary>
+        /// <returns></returns>
+        public bool SetRemoteMode( RemoteStatus status )
+        {
+            if( status == RemoteStatus.REMOTE )
+            {
+                return device.SendCommand("SYST:REM REM");
+            }
+            else
+            {
+                return device.SendCommand("SYST:REM LOC");
+            }
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// SYSTem:REMote[:STATus]?
+        /// </summary>
+        /// <returns></returns>
+        public RemoteStatus GetRemoteMode()
+        {
+            string ans = device.SendCommandGetAns("SYST:REM?");
+            if (ans.Length == 0) return RemoteStatus.ERROR;
+
+            if( ans.Contains("REM") )
+            {
+                return RemoteStatus.REMOTE;
+            }
+            else if( ans.Contains("LOC") )
+            {
+                return RemoteStatus.LOCAL;
+            }
+            else
+            {
+                return RemoteStatus.ERROR;
+            }
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// SYSTem:REMote:CV[:STATus] REMote
+        /// SYSTem:REMote:CV[:STATus] LOCal
+        /// </summary>
+        /// <param name="status"></param>
+        /// <returns></returns>
+        public bool SetRemoteVoltage(RemoteStatus status)
+        {
+            if (status == RemoteStatus.REMOTE)
+            {
+                return device.SendCommand("SYST:REM:CV REM");
+            }
+            else
+            {
+                return device.SendCommand("SYST:REM:CV LOC");
+            }
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// SYSTem:REMote:CV[:STATus]?
+        /// </summary>
+        /// <returns></returns>
+        public RemoteStatus GetRemoteVoltage()
+        {
+            string ans = device.SendCommandGetAns("SYST:REM:CV?");
+            if (ans.Length == 0) return RemoteStatus.ERROR;
+
+            if (ans.Contains("REM"))
+            {
+                return RemoteStatus.REMOTE;
+            }
+            else if (ans.Contains("LOC"))
+            {
+                return RemoteStatus.LOCAL;
+            }
+            else
+            {
+                return RemoteStatus.ERROR;
+            }
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// SYSTem:REMote:CC[:STATus] REMote
+        /// SYSTem:REMote:CC[:STATus] LOCal
+        /// </summary>
+        /// <param name="status"></param>
+        /// <returns></returns>
+        public bool SetRemoteCurrent(RemoteStatus status)
+        {
+            if (status == RemoteStatus.REMOTE)
+            {
+                return device.SendCommand("SYST:REM:CC REM");
+            }
+            else
+            {
+                return device.SendCommand("SYST:REM:CC LOC");
+            }
+        }
+
+        //-----------------------------------------------------------------------------------------
+        /// <summary>
+        /// SYSTem:REMote:CC[:STATus]?
+        /// </summary>
+        /// <returns></returns>
+        public RemoteStatus GetRemoteCurrent()
+        {
+            string ans = device.SendCommandGetAns("SYST:REM:CC?");
+            if (ans.Length == 0) return RemoteStatus.ERROR;
+
+            if (ans.Contains("REM"))
+            {
+                return RemoteStatus.REMOTE;
+            }
+            else if (ans.Contains("LOC"))
+            {
+                return RemoteStatus.LOCAL;
+            }
+            else
+            {
+                return RemoteStatus.ERROR;
+            }
+        }
+
         #endregion
 
         #region OUTPUT
@@ -722,6 +851,14 @@ namespace LabToys.DeltaElektronika
             STOP,
             PAUSE,
             RUN,
+            ERROR
+        }
+
+        //-----------------------------------------------------------------------------------------
+        public enum RemoteStatus
+        {
+            REMOTE,
+            LOCAL,
             ERROR
         }
 

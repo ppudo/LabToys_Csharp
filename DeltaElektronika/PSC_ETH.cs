@@ -4,6 +4,7 @@ using System.IO.Pipes;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace LabToys.DeltaElektronika
 {
@@ -22,6 +23,20 @@ namespace LabToys.DeltaElektronika
             device = new SCPIsocket(ip, port);
             device.Timeout = 2000;
         }
+
+        #region VARIABLES
+        //-------------------------------------------------------------------------------------------------------------------------------------------
+        //  V   V   A   RRRR  III   A   BBBB  L     EEEEE  SSS 
+        //  V   V  A A  R   R  I   A A  B   B L     E     S    
+        //  V   V A   A RRRR   I  A   A BBBB  L     EEE    SSS 
+        //   V V  AAAAA R R    I  AAAAA B   B L     E         S
+        //    V   A   A R  R  III A   A BBBB  LLLLL EEEEE  SSS 
+        private Status deviceStatus = new Status();
+
+        //-----------------------------------------------------------------------------------------
+        public Status DeviceStatus { get => deviceStatus; }
+
+        #endregion
 
         #region GENERAL_INSTRUCTIONS
         //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -669,14 +684,14 @@ namespace LabToys.DeltaElektronika
             string step = "";
             string[] steps = new string[2000];
             if (device.Connect() == false) return new string[0];
-            while (step != "END\n")
+            while ( !step.Contains("END") )
             {
                 step = GetSequenceStep(idx);
                 if (step.Length == 0)
                 {
                     break;
                 }
-                steps[idx - 1] = step.Substring(0, step.Length - 1);
+                steps[idx - 1] = step;
                 idx++;
             }
             device.Close();
@@ -745,34 +760,6 @@ namespace LabToys.DeltaElektronika
         }
 
         //-----------------------------------------------------------------------------------------
-        public class SequenceStatus
-        {
-            private SequenceState state = SequenceState.ERROR;
-            private int idx = 0;
-
-            public SequenceState State { get => state; }
-            public int Idx { get => idx; }
-
-            public SequenceStatus(string status)
-            {
-                if (status.Contains("STOP") == true)
-                {
-                    state = SequenceState.STOP;
-                }
-                else if (status.Contains("PAUSE") == true)
-                {
-                    state = SequenceState.PAUSE;
-                    idx = int.Parse(status.Substring("PAUSE".Length + 1));
-                }
-                else if (status.Contains("RUN") == true)
-                {
-                    state = SequenceState.RUN;
-                    idx = int.Parse(status.Substring("RUN".Length + 1));
-                }
-            }
-        }
-
-        //-----------------------------------------------------------------------------------------
         /// <summary>
         /// PROGram:SELected:STATe
         /// </summary>
@@ -809,6 +796,43 @@ namespace LabToys.DeltaElektronika
             }
 
             device.Close();
+            return true;
+        }
+        #endregion
+
+        #region ADDITIONAL_FUNCTIONS
+        //-------------------------------------------------------------------------------------------------------------------------------------------
+        //    A   DDDD  DDDD  III TTTTT III  OOO  N   N   A   L           EEEEE U   U N   N  CCC  TTTTT III  OOO  N   N  SSS 
+        //   A A  D   D D   D  I    T    I  O   O NN  N  A A  L           E     U   U NN  N C   C   T    I  O   O NN  N S
+        //  A   A D   D D   D  I    T    I  O   O N N N A   A L           EEE   U   U N N N C       T    I  O   O N N N  SSS
+        //  AAAAA D   D D   D  I    T    I  O   O N  NN AAAAA L           E     U   U N  NN C   C   T    I  O   O N  NN     S
+        //  A   A DDDD DDDD   III   T   III  OOO  N   N A   A LLLLL       E      UUU  N   N  CCC    T   III  OOO  N   N  SSS
+        
+        public bool RefreshDeviceStatus( bool closeConnection=true )
+        {
+            if( !device.WillIgnoreClose )
+            {
+                if (device.Connect() == false) return false;
+            }
+
+            deviceStatus.measuredVoltage = MeasureOutputVoltage();
+            deviceStatus.measuredCurrent = MeasureOutputCurrent();
+            deviceStatus.CalculateOutputPower();
+
+            deviceStatus.digitalOutputs = GetDigitalOutputs();
+            deviceStatus.digitalInputs = GetDigitalInputs();
+
+            deviceStatus.selectedSequence = GetSelectedSequenceName();
+            if(deviceStatus.selectedSequence != "" )
+            {
+                deviceStatus.sequenceStatus = GetSequenceStatus();
+            }
+
+            if( closeConnection )
+            {
+                device.Close();
+            }
+
             return true;
         }
         #endregion
@@ -860,6 +884,91 @@ namespace LabToys.DeltaElektronika
             REMOTE,
             LOCAL,
             ERROR
+        }
+
+        #endregion
+
+        #region CLASSES
+        //-------------------------------------------------------------------------------------------------------------------------------------------
+        //   CCC  L       A    SSS   SSS  EEEEE  SSS
+        //  C   C L      A A  S     S     E     S
+        //  C     L     A   A  SSS   SSS  EEE    SSS
+        //  C   C L     AAAAA     S     S E         S
+        //   CCC  LLLLL A   A  SSS   SSS  EEEEE  SSS
+        //
+
+        public class SequenceStatus
+        {
+            private SequenceState state = SequenceState.ERROR;
+            private int idx = 0;
+
+            //------------------------------------------------------------
+            public SequenceState State { get => state; }
+            public int Idx { get => idx; }
+
+            //------------------------------------------------------------
+            public SequenceStatus(string status)
+            {
+                if (status.Contains("STOP") == true)
+                {
+                    state = SequenceState.STOP;
+                }
+                else if (status.Contains("PAUSE") == true)
+                {
+                    state = SequenceState.PAUSE;
+                    idx = int.Parse(status.Substring("PAUSE".Length + 1));
+                }
+                else if (status.Contains("RUN") == true)
+                {
+                    state = SequenceState.RUN;
+                    idx = int.Parse(status.Substring("RUN".Length + 1));
+                }
+            }
+        }
+
+        //-----------------------------------------------------------------------------------------
+        public class Status
+        {
+            protected internal float measuredVoltage = float.NaN;
+            protected internal float measuredCurrent = float.NaN;
+            protected internal float outputPower = float.NaN;
+
+            protected internal int digitalOutputs = int.MinValue;
+            protected internal int digitalInputs = int.MinValue;
+
+            protected internal string selectedSequence = "";
+            protected internal SequenceStatus sequenceStatus = null;
+
+            //------------------------------------------------------------
+            public float MeasuredVoltage { get => measuredVoltage; }
+            public float MeasuredCurrent { get => measuredCurrent; }
+            public float OutputPower { get => outputPower; }
+
+            public int DigitalOutputs { get => digitalOutputs; }
+            public int DigitalInputs { get => digitalInputs; }
+
+            public string SelectedSequence { get => selectedSequence; }
+            public SequenceStatus SequenceStatus { get => sequenceStatus; }
+
+            //------------------------------------------------------------
+            public Status()
+            {
+                
+            }
+
+            //------------------------------------------------------------
+            public void CalculateOutputPower()
+            {
+                if (!float.IsNaN(measuredVoltage)
+                && !float.IsNaN(measuredCurrent))
+                {
+                    outputPower = measuredVoltage * measuredCurrent;
+                }
+                else
+                {
+                    outputPower = float.NaN;
+                }
+            }
         }
 
         #endregion

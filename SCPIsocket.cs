@@ -18,9 +18,11 @@ namespace LabToys
         private int sendDelay = 1;
         private TcpClient deviceSocket = null;
         private NetworkStream deviceStream = null;
+        private int ignoreCloseCounter = 0;
 
         public int Timeout { get => timeout; set => timeout = value; }
         public int SendDelay { get => sendDelay; set => sendDelay = value; }
+        public bool WillIgnoreClose { get => ignoreCloseCounter > 0; }
 
         //-------------------------------------------------------------------------------------------------------------------------------------------
         /// <summary>
@@ -56,24 +58,40 @@ namespace LabToys
         //-----------------------------------------------------------------------------------------
         public bool Connect()
         {
-            return ConnectInternal(true);
+            if( deviceStream == null )
+            {
+                ignoreCloseCounter = 0;
+                return ConnectInternal(true);
+            }
+            else
+            {
+                ignoreCloseCounter++;
+                return true;
+            }
         }
 
         //-----------------------------------------------------------------------------------------
         public void Close()
         {
-            if (deviceStream != null)
+            if( ignoreCloseCounter > 0 )
             {
-                deviceStream.Close();
-                deviceStream.Dispose();
-                deviceStream = null;
+                ignoreCloseCounter--;
             }
-
-            if (deviceSocket != null)
+            else
             {
-                deviceSocket.Close();
-                deviceSocket.Dispose();
-                deviceSocket = null;
+                if (deviceStream != null)
+                {
+                    deviceStream.Close();
+                    deviceStream.Dispose();
+                    deviceStream = null;
+                }
+
+                if (deviceSocket != null)
+                {
+                    deviceSocket.Close();
+                    deviceSocket.Dispose();
+                    deviceSocket = null;
+                }
             }
         }
 
@@ -150,7 +168,7 @@ namespace LabToys
             }
 
             string response = Encoding.ASCII.GetString(data);
-            return response;
+            return response.Substring( 0, response.Length-1 );
         }
 
         //-----------------------------------------------------------------------------------------

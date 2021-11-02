@@ -31,10 +31,10 @@ namespace LabToys.DeltaElektronika
         //  V   V A   A RRRR   I  A   A BBBB  L     EEE    SSS 
         //   V V  AAAAA R R    I  AAAAA B   B L     E         S
         //    V   A   A R  R  III A   A BBBB  LLLLL EEEEE  SSS 
-        private Status deviceStatus = new Status();
+        private DeviceStatus status = new DeviceStatus();
 
         //-----------------------------------------------------------------------------------------
-        public Status DeviceStatus { get => deviceStatus; }
+        public DeviceStatus Status { get => status; }
 
         #endregion
 
@@ -815,17 +815,17 @@ namespace LabToys.DeltaElektronika
                 if (device.Connect() == false) return false;
             }
 
-            deviceStatus.measuredVoltage = MeasureOutputVoltage();
-            deviceStatus.measuredCurrent = MeasureOutputCurrent();
-            deviceStatus.CalculateOutputPower();
+            status.measuredVoltage = MeasureOutputVoltage();
+            status.measuredCurrent = MeasureOutputCurrent();
+            status.CalculateOutputPower();
 
-            deviceStatus.digitalOutputs = GetDigitalOutputs();
-            deviceStatus.digitalInputs = GetDigitalInputs();
+            status.digitalOutputs = GetDigitalOutputs();
+            status.digitalInputs = GetDigitalInputs();
 
-            deviceStatus.selectedSequence = GetSelectedSequenceName();
-            if(deviceStatus.selectedSequence != "" )
+            status.selectedSequence = GetSelectedSequenceName();
+            if(status.selectedSequence != "" )
             {
-                deviceStatus.sequenceStatus = GetSequenceStatus();
+                status.sequenceStatus = GetSequenceStatus();
             }
 
             if( closeConnection )
@@ -927,7 +927,7 @@ namespace LabToys.DeltaElektronika
         }
 
         //-----------------------------------------------------------------------------------------
-        public class Status
+        public class DeviceStatus
         {
             protected internal float measuredVoltage = float.NaN;
             protected internal float measuredCurrent = float.NaN;
@@ -951,7 +951,7 @@ namespace LabToys.DeltaElektronika
             public SequenceStatus SequenceStatus { get => sequenceStatus; }
 
             //------------------------------------------------------------
-            public Status()
+            public DeviceStatus()
             {
                 
             }

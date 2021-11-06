@@ -70,7 +70,7 @@ namespace LabToys.DeltaElektronika
             {
                 info = info.Remove(0, 72);
             }
-            return device.SendCommand("*PUD " + info);
+            return device.SendCommand("*PUD " + info) == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -94,11 +94,11 @@ namespace LabToys.DeltaElektronika
         {
             if (password.Length > 0)
             {
-                return device.SendCommand("*SAV " + password);
+                return device.SendCommand("*SAV " + password) == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
             }
             else
             {
-                return device.SendCommand("*SAV");
+                return device.SendCommand("*SAV") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
             }
         }
 
@@ -108,7 +108,7 @@ namespace LabToys.DeltaElektronika
         /// </summary>
         public bool RestoreToDefaultState()
         {
-            return device.SendCommand("*RST");
+            return device.SendCommand("*RST") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -117,7 +117,7 @@ namespace LabToys.DeltaElektronika
         /// </summary>
         public bool RecallCalibration()
         {
-            return device.SendCommand("*RCL");
+            return device.SendCommand("*RCL") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
         #endregion
 
@@ -136,7 +136,7 @@ namespace LabToys.DeltaElektronika
         /// <param name="max"></param>
         public bool SetOutputMaxVoltage(float max)
         {
-            return device.SendCommand("SOUR:VOLT:MAX " + max.ToString("0.0000"));
+            return device.SendCommand("SOUR:VOLT:MAX " + max.ToString("0.0000")) == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -165,7 +165,7 @@ namespace LabToys.DeltaElektronika
         /// <param name="max"></param>
         public bool SetOutputMaxCurrent(float max)
         {
-            return device.SendCommand("SOUR:CURR:MAX " + max.ToString("0.0000"));
+            return device.SendCommand("SOUR:CURR:MAX " + max.ToString("0.0000")) == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -194,7 +194,7 @@ namespace LabToys.DeltaElektronika
         /// <param name="voltage"></param>
         public bool SetOutputVoltage(float voltage)
         {
-            return device.SendCommand("SOUR:VOLT " + voltage.ToString("0.0000"));
+            return device.SendCommand("SOUR:VOLT " + voltage.ToString("0.0000")) == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -223,7 +223,7 @@ namespace LabToys.DeltaElektronika
         /// <param name="current"></param>
         public bool SetOutputCurrent(float current)
         {
-            return device.SendCommand("SOUR:CURR " + current.ToString("0.0000"));
+            return device.SendCommand("SOUR:CURR " + current.ToString("0.0000")) == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -259,9 +259,9 @@ namespace LabToys.DeltaElektronika
         /// MEASure:VOLTage?
         /// </summary>
         /// <returns></returns>
-        public float MeasureOutputVoltage()
+        private float MeasureOutputVoltage( int connIdx )
         {
-            string ans = device.SendCommandGetAns("MEAS:VOLT?");
+            string ans = device.SendCommandGetAns("MEAS:VOLT?", false, connIdx);
             if (ans.Length == 0) return float.NaN;
             if (float.TryParse(ans, out float value))
             {
@@ -274,13 +274,19 @@ namespace LabToys.DeltaElektronika
         }
 
         //-----------------------------------------------------------------------------------------
+        public float MeasureOutputVoltage()
+        {
+            return MeasureOutputVoltage((int)SCPIsocket.ConnectionIdx.NO_IDX);
+        }
+
+        //-----------------------------------------------------------------------------------------
         /// <summary>
         /// MEASure:CURRent?
         /// </summary>
         /// <returns></returns>
-        public float MeasureOutputCurrent()
+        private float MeasureOutputCurrent( int connIdx )
         {
-            string ans = device.SendCommandGetAns("MEAS:CURR?");
+            string ans = device.SendCommandGetAns("MEAS:CURR?", false, connIdx);
             if (ans.Length == 0) return float.NaN;
             if (float.TryParse(ans, out float value))
             {
@@ -290,6 +296,12 @@ namespace LabToys.DeltaElektronika
             {
                 return float.NaN;
             }
+        }
+
+        //-----------------------------------------------------------------------------------------
+        public float MeasureOutputCurrent()
+        {
+            return MeasureOutputCurrent((int)SCPIsocket.ConnectionIdx.NO_IDX);
         }
 
         //-----------------------------------------------------------------------------------------
@@ -321,7 +333,7 @@ namespace LabToys.DeltaElektronika
         public bool SetDigitalOutputs(int outputs)
         {
             outputs = outputs & 0x3F;
-            return device.SendCommand("UOUT " + outputs.ToString());
+            return device.SendCommand("UOUT " + outputs.ToString()) == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -329,9 +341,9 @@ namespace LabToys.DeltaElektronika
         /// UOUTput?
         /// </summary>
         /// <returns></returns>
-        public int GetDigitalOutputs()
+        private int GetDigitalOutputs( int connIdx )
         {
-            string ans = device.SendCommandGetAns("UOUT?");
+            string ans = device.SendCommandGetAns("UOUT?", false, connIdx);
             if (ans.Length == 0) return int.MinValue;
             if (int.TryParse(ans, out int value))
             {
@@ -344,13 +356,19 @@ namespace LabToys.DeltaElektronika
         }
 
         //-----------------------------------------------------------------------------------------
+        public int GetDigitalOutputs()
+        {
+            return GetDigitalOutputs((int)SCPIsocket.ConnectionIdx.NO_IDX);
+        }
+
+        //-----------------------------------------------------------------------------------------
         /// <summary>
         /// UINPut:CONDition?
         /// </summary>
         /// <returns></returns>
-        public int GetDigitalInputs()
+        private int GetDigitalInputs( int connIdx )
         {
-            string ans = device.SendCommandGetAns("UINP:COND?");
+            string ans = device.SendCommandGetAns("UINP:COND?", false, connIdx);
             if (ans.Length == 0) return int.MinValue;
             if (int.TryParse(ans, out int value))
             {
@@ -360,6 +378,12 @@ namespace LabToys.DeltaElektronika
             {
                 return int.MinValue;
             }
+        }
+
+        //-----------------------------------------------------------------------------------------
+        public int GetDigitalInputs()
+        {
+            return GetDigitalInputs((int)SCPIsocket.ConnectionIdx.NO_IDX);
         }
         #endregion
 
@@ -377,7 +401,7 @@ namespace LabToys.DeltaElektronika
         /// </summary>
         public bool LockFrontPanel()
         {
-            return device.SendCommand("SYST:FRON 1");
+            return device.SendCommand("SYST:FRON 1") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -386,7 +410,7 @@ namespace LabToys.DeltaElektronika
         /// </summary>
         public bool UnlockFrontPanel()
         {
-            return device.SendCommand("SYST:FRON 0");
+            return device.SendCommand("SYST:FRON 0") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -418,11 +442,11 @@ namespace LabToys.DeltaElektronika
         {
             if( status == RemoteStatus.REMOTE )
             {
-                return device.SendCommand("SYST:REM REM");
+                return device.SendCommand("SYST:REM REM") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
             }
             else
             {
-                return device.SendCommand("SYST:REM LOC");
+                return device.SendCommand("SYST:REM LOC") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
             }
         }
 
@@ -461,11 +485,11 @@ namespace LabToys.DeltaElektronika
         {
             if (status == RemoteStatus.REMOTE)
             {
-                return device.SendCommand("SYST:REM:CV REM");
+                return device.SendCommand("SYST:REM:CV REM") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
             }
             else
             {
-                return device.SendCommand("SYST:REM:CV LOC");
+                return device.SendCommand("SYST:REM:CV LOC") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
             }
         }
 
@@ -504,11 +528,11 @@ namespace LabToys.DeltaElektronika
         {
             if (status == RemoteStatus.REMOTE)
             {
-                return device.SendCommand("SYST:REM:CC REM");
+                return device.SendCommand("SYST:REM:CC REM") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
             }
             else
             {
-                return device.SendCommand("SYST:REM:CC LOC");
+                return device.SendCommand("SYST:REM:CC LOC") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
             }
         }
 
@@ -552,7 +576,7 @@ namespace LabToys.DeltaElektronika
         /// </summary>
         public bool EnableOutput()
         {
-            return device.SendCommand("OUTP 1");
+            return device.SendCommand("OUTP 1") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -561,7 +585,7 @@ namespace LabToys.DeltaElektronika
         /// </summary>
         public bool DisableOutput()
         {
-            return device.SendCommand("OUTP 0");
+            return device.SendCommand("OUTP 0") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -611,13 +635,19 @@ namespace LabToys.DeltaElektronika
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
-        public bool SelectSequence(string name)
+        private bool SelectSequence(string name, int connIdx)
         {
             if (name.Length > 16)
             {
                 name = name.Substring(0, 16);
             }
-            return device.SendCommand("PROG:SEL:NAME " + name);
+            return device.SendCommand("PROG:SEL:NAME " + name, false, connIdx) == connIdx ? true : false;
+        }
+
+        //-----------------------------------------------------------------------------------------
+        public bool SelectSequence(string name)
+        {
+            return SelectSequence(name, (int)SCPIsocket.ConnectionIdx.NO_IDX);
         }
 
         //-----------------------------------------------------------------------------------------
@@ -625,11 +655,17 @@ namespace LabToys.DeltaElektronika
         /// PROGram:SELected:NAME
         /// </summary>
         /// <returns></returns>
-        public string GetSelectedSequenceName()
+        private string GetSelectedSequenceName( int connIdx)
         {
-            string ans = device.SendCommandGetAns("PROG:SEL:NAME?");
+            string ans = device.SendCommandGetAns("PROG:SEL:NAME?", false, connIdx);
             if (ans.Length == 0) return "";
             return ans;
+        }
+
+        //-----------------------------------------------------------------------------------------
+        public string GetSelectedSequenceName()
+        {
+            return GetSelectedSequenceName((int)SCPIsocket.ConnectionIdx.NO_IDX);
         }
 
         //-----------------------------------------------------------------------------------------
@@ -638,11 +674,11 @@ namespace LabToys.DeltaElektronika
         /// </summary>
         /// <param name="stepNo"></param>
         /// <returns></returns>
-        public string GetSequenceStep(int stepNo)
+        private string GetSequenceStep(int stepNo, int connIdx)
         {
             if (stepNo <= 2000 && stepNo >= 1)
             {
-                string ans = device.SendCommandGetAns("PROG:SEL:STEP " + stepNo.ToString() + "?");
+                string ans = device.SendCommandGetAns("PROG:SEL:STEP " + stepNo.ToString() + "?", false, connIdx);
                 if (ans.Length == 0) return "";
                 int idx = ans.IndexOf(' ');
                 if (idx == -1) return "";
@@ -655,22 +691,33 @@ namespace LabToys.DeltaElektronika
         }
 
         //-----------------------------------------------------------------------------------------
+        public string GetSequenceStep( int stepNo )
+        {
+            return GetSequenceStep(stepNo, (int)SCPIsocket.ConnectionIdx.NO_IDX);
+        }
+
+        //-----------------------------------------------------------------------------------------
         /// <summary>
         /// #PROGram:SELected:STEP
         /// </summary>
         /// <param name="stepNo"></param>
         /// <param name="step"></param>
         /// <returns></returns>
-        public bool SetSequenceStep( int stepNo, string step )
+        private bool SetSequenceStep( int stepNo, string step, int connIdx )
         {
             if( stepNo <= 2000 && stepNo >= 1 )
             {
-                return device.SendCommand("PROG:SEL:STEP " + stepNo.ToString() + " " + step);
+                return device.SendCommand("PROG:SEL:STEP " + stepNo.ToString() + " " + step, false, connIdx) == connIdx ? true : false;
             }
             else
             {
                 return false;
             }
+        }
+
+        public bool SetSequenceStep(int stepNo, string step)
+        {
+            return SetSequenceStep(stepNo, step, (int)SCPIsocket.ConnectionIdx.NO_IDX);
         }
 
         //-----------------------------------------------------------------------------------------
@@ -683,10 +730,11 @@ namespace LabToys.DeltaElektronika
             int idx = 1;
             string step = "";
             string[] steps = new string[2000];
-            if (device.Connect() == false) return new string[0];
+            int connIdx = device.Connect();
+            if (connIdx == (int)SCPIsocket.ConnectionIdx.ERROR) return new string[0];
             while ( !step.Contains("END") )
             {
-                step = GetSequenceStep(idx);
+                step = GetSequenceStep(idx, connIdx);
                 if (step.Length == 0)
                 {
                     break;
@@ -694,7 +742,7 @@ namespace LabToys.DeltaElektronika
                 steps[idx - 1] = step;
                 idx++;
             }
-            device.Close();
+            device.Close( connIdx );
             Array.Resize(ref steps, idx - 1);
             return steps;
         }
@@ -704,9 +752,15 @@ namespace LabToys.DeltaElektronika
         /// PROGram:SELected:DELete
         /// </summary>
         /// <returns></returns>
+        private bool DeleteSelectedSequence( int connIdx )
+        {
+            return device.SendCommand("PROG:SEL:DEL", false, connIdx) == connIdx ? true : false;
+        }
+
+        //-----------------------------------------------------------------------------------------
         public bool DeleteSelectedSequence()
         {
-            return device.SendCommand("PROG:SEL:DEL");
+            return DeleteSelectedSequence((int)SCPIsocket.ConnectionIdx.NO_IDX);
         }
 
         //-----------------------------------------------------------------------------------------
@@ -716,7 +770,7 @@ namespace LabToys.DeltaElektronika
         /// <returns></returns>
         public bool StartSequence()
         {
-            return device.SendCommand("PROG:SEL:STAT RUN");
+            return device.SendCommand("PROG:SEL:STAT RUN") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -726,7 +780,7 @@ namespace LabToys.DeltaElektronika
         /// <returns></returns>
         public bool PauseSequence()
         {
-            return device.SendCommand("PROG:SEL:STAT PAUS");
+            return device.SendCommand("PROG:SEL:STAT PAUS") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -736,7 +790,7 @@ namespace LabToys.DeltaElektronika
         /// <returns></returns>
         public bool ContinueSequence()
         {
-            return device.SendCommand("PROG:SEL:STAT CONT");
+            return device.SendCommand("PROG:SEL:STAT CONT") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -746,7 +800,7 @@ namespace LabToys.DeltaElektronika
         /// <returns></returns>
         public bool NextStep()
         {
-            return device.SendCommand("PROG:SEL:STAT NEXT");
+            return device.SendCommand("PROG:SEL:STAT NEXT") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -756,7 +810,7 @@ namespace LabToys.DeltaElektronika
         /// <returns></returns>
         public bool StopSequence()
         {
-            return device.SendCommand("PROG:SEL:STAT STOP");
+            return device.SendCommand("PROG:SEL:STAT STOP") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -764,9 +818,15 @@ namespace LabToys.DeltaElektronika
         /// PROGram:SELected:STATe
         /// </summary>
         /// <returns></returns>
+        private SequenceStatus GetSequenceStatus( int connIdx )
+        {
+            return new SequenceStatus(device.SendCommandGetAns("PROG:SEL:STAT?", false, connIdx));
+        }
+
+        //-----------------------------------------------------------------------------------------
         public SequenceStatus GetSequenceStatus()
         {
-            return new SequenceStatus(device.SendCommandGetAns("PROG:SEL:STAT?"));
+            return GetSequenceStatus((int)SCPIsocket.ConnectionIdx.NO_IDX);
         }
 
         //-----------------------------------------------------------------------------------------
@@ -776,26 +836,27 @@ namespace LabToys.DeltaElektronika
         /// <returns></returns>
         public bool TriggerStep()
         {
-            return device.SendCommand("TRIG:IMM");
+            return device.SendCommand("TRIG:IMM") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
         public bool SendSequence( string name, string[] steps )
         {
-            if (device.Connect() == false) return false;
+            int connIdx = device.Connect();
+            if ( connIdx == (int)SCPIsocket.ConnectionIdx.ERROR ) return false;
 
             //delete current sequence with the same name
-            if (SelectSequence(name) == false) return false;
-            if (DeleteSelectedSequence() == false) return false;
+            if (SelectSequence(name, connIdx) == false) return false;
+            if (DeleteSelectedSequence(connIdx) == false) return false;
 
             //select sequence again and upload new sequence
-            if (SelectSequence(name) == false) return false;
+            if (SelectSequence(name, connIdx) == false) return false;
             for( int i=0; i<steps.Length; i++ )
             {
-                if (SetSequenceStep(i + 1, steps[i]) == false) return false;
+                if (SetSequenceStep(i + 1, steps[i], connIdx) == false) return false;
             }
 
-            device.Close();
+            device.Close( connIdx );
             return true;
         }
         #endregion
@@ -807,30 +868,39 @@ namespace LabToys.DeltaElektronika
         //  A   A D   D D   D  I    T    I  O   O N N N A   A L           EEE   U   U N N N C       T    I  O   O N N N  SSS
         //  AAAAA D   D D   D  I    T    I  O   O N  NN AAAAA L           E     U   U N  NN C   C   T    I  O   O N  NN     S
         //  A   A DDDD DDDD   III   T   III  OOO  N   N A   A LLLLL       E      UUU  N   N  CCC    T   III  OOO  N   N  SSS
-        
+
+        private int refreshConnIdx = (int)SCPIsocket.ConnectionIdx.NO_IDX;
+
         public bool RefreshDeviceStatus( bool closeConnection=true )
         {
-            if( !device.WillIgnoreClose )
+            refreshConnIdx = device.Connect(refreshConnIdx);
+            if (refreshConnIdx == (int)SCPIsocket.ConnectionIdx.ERROR)
             {
-                if (device.Connect() == false) return false;
+                refreshConnIdx = (int)SCPIsocket.ConnectionIdx.NO_IDX;
+                return false;
             }
 
-            status.measuredVoltage = MeasureOutputVoltage();
-            status.measuredCurrent = MeasureOutputCurrent();
+            status.measuredVoltage = MeasureOutputVoltage( refreshConnIdx );
+            status.measuredCurrent = MeasureOutputCurrent( refreshConnIdx );
             status.CalculateOutputPower();
 
-            status.digitalOutputs = GetDigitalOutputs();
-            status.digitalInputs = GetDigitalInputs();
+            status.digitalOutputs = GetDigitalOutputs( refreshConnIdx );
+            status.digitalInputs = GetDigitalInputs( refreshConnIdx );
 
-            status.selectedSequence = GetSelectedSequenceName();
+            status.selectedSequence = GetSelectedSequenceName( refreshConnIdx );
             if(status.selectedSequence != "" )
             {
-                status.sequenceStatus = GetSequenceStatus();
+                status.sequenceStatus = GetSequenceStatus( refreshConnIdx );
             }
 
             if( closeConnection )
             {
-                device.Close();
+                device.Close( refreshConnIdx );
+                refreshConnIdx = (int)SCPIsocket.ConnectionIdx.NO_IDX;
+            }
+            else
+            {
+                device.Free( refreshConnIdx );
             }
 
             return true;

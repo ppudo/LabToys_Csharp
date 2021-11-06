@@ -18,11 +18,15 @@ namespace LabToys
         private int sendDelay = 1;
         private TcpClient deviceSocket = null;
         private NetworkStream deviceStream = null;
-        private int ignoreCloseCounter = 0;
+
+        private int idxConnectionCounter = 0;
+        private List<int> connectionList = new List<int>();
+        private int currentConnectionIdx = (int)ConnectionIdx.NO_IDX;
+        private List<int> freeConnectionList = new List<int>();
+        private int connectionWaitTime = 5;
 
         public int Timeout { get => timeout; set => timeout = value; }
         public int SendDelay { get => sendDelay; set => sendDelay = value; }
-        public bool WillIgnoreClose { get => ignoreCloseCounter > 0; }
 
         //-------------------------------------------------------------------------------------------------------------------------------------------
         /// <summary>
@@ -37,72 +41,131 @@ namespace LabToys
         }
 
         //-----------------------------------------------------------------------------------------
-        private bool ConnectInternal(bool stayConnected = false)
+        private int ConnectInternal(bool stayConnected = false, int oldIdx = (int)ConnectionIdx.NO_IDX)
         {
-            try
+            int idx = (int)ConnectionIdx.NO_IDX;
+
+            //recall old socket idx if oldIdx is in use
+            if ( oldIdx != (int)ConnectionIdx.NO_IDX )
             {
-                deviceSocket = new TcpClient(hostIP, hostPort);
-                deviceSocket.ReceiveTimeout = timeout;
-                deviceStream = deviceSocket.GetStream();
-                this.stayConnected = stayConnected;
-            }
-            catch
-            {
-                Close();
-                return false;
+                if( freeConnectionList.Remove(oldIdx) == true )
+                {
+                    idx = oldIdx;
+                }
             }
 
-            return true;
-        }
-
-        //-----------------------------------------------------------------------------------------
-        public bool Connect()
-        {
+            //create new Idx
+            if( idx == (int)ConnectionIdx.NO_IDX )
+            {
+                do
+                {
+                    idxConnectionCounter++;
+                    if (idxConnectionCounter >= int.MaxValue)
+                    {
+                        idxConnectionCounter = 1;
+                    }
+                }
+                while (connectionList.Contains(idxConnectionCounter)
+                        || freeConnectionList.Contains(idxConnectionCounter));
+            }
+     
+            //create socket if there is no socket
             if( deviceStream == null )
             {
-                ignoreCloseCounter = 0;
-                return ConnectInternal(true);
+                try
+                {
+                    deviceSocket = new TcpClient(hostIP, hostPort);
+                    deviceSocket.ReceiveTimeout = timeout;
+                    deviceStream = deviceSocket.GetStream();
+                    this.stayConnected = stayConnected;
+
+                    currentConnectionIdx = idx;
+                }
+                catch
+                {
+                    DisposeStreamSocket();
+                    return (int)ConnectionIdx.ERROR;
+                }
             }
-            else
+
+            connectionList.Add(idx);
+            return idx;
+        }
+
+        //-----------------------------------------------------------------------------------------
+        public int Connect( int oldIdx = (int)ConnectionIdx.NO_IDX )
+        {
+            return ConnectInternal(true, oldIdx);
+        }
+
+        //-----------------------------------------------------------------------------------------
+        public void Close( int connIdx )
+        {
+            if( ( connectionList.Remove(connIdx)
+                    || freeConnectionList.Remove(connIdx) )
+                && connectionList.Count == 0
+                && freeConnectionList.Count == 0 )
             {
-                ignoreCloseCounter++;
-                return true;
+                //connection can be close if there is no other connection and when all free connection are also closed
+                //additionaly connIdx must be properly removed from list - against puting random numbers
+                DisposeStreamSocket();
+            }
+
+            //if this was current connection we need to change it to other if there is other avaiable
+            if( currentConnectionIdx == connIdx )
+            {
+                if( connectionList.Count > 0 )
+                {
+                    currentConnectionIdx = connectionList[0];
+                }
+                else
+                {
+                    currentConnectionIdx = (int)ConnectionIdx.NO_IDX;
+                }
             }
         }
 
         //-----------------------------------------------------------------------------------------
-        public void Close()
+        public void Free( int connIdx )
         {
-            if( ignoreCloseCounter > 0 )
+            if( connectionList.Remove(connIdx) )
             {
-                ignoreCloseCounter--;
+                //connection is moved to free only when it can be properly removed from connection list
+                freeConnectionList.Add(connIdx);
             }
-            else
-            {
-                if (deviceStream != null)
-                {
-                    deviceStream.Close();
-                    deviceStream.Dispose();
-                    deviceStream = null;
-                }
 
-                if (deviceSocket != null)
+            //if this was current connection we need to change it to other if there is other avaiable
+            if (currentConnectionIdx == connIdx)
+            {
+                if (connectionList.Count > 0)
                 {
-                    deviceSocket.Close();
-                    deviceSocket.Dispose();
-                    deviceSocket = null;
+                    currentConnectionIdx = connectionList[0];
+                }
+                else
+                {
+                    currentConnectionIdx = (int)ConnectionIdx.NO_IDX;
                 }
             }
         }
 
         //-----------------------------------------------------------------------------------------
-        public bool SendRaw(byte[] data, bool stayConnected = false)
+        public int SendRaw(byte[] data, bool stayConnected = false, int connIdx = (int)ConnectionIdx.NO_IDX)
         {
-            if (deviceStream == null)
+            //check for connection
+            if (deviceStream == null
+                || connIdx == (int)ConnectionIdx.NO_IDX )
             {
-                if (ConnectInternal() == false) return false;
+                connIdx = ConnectInternal(false, connIdx);
+                if (connIdx == (int)ConnectionIdx.ERROR) return connIdx;
             }
 
+            //check that we are allowed for transmit
+            while( connIdx != currentConnectionIdx )
+            {
+                Thread.Sleep(connectionWaitTime);
+            }
+
+            //send message
             try
             {
                 deviceStream.Write(data, 0, data.Length);
@@ -110,32 +173,34 @@ namespace LabToys
                 if (stayConnected == false
                     && this.stayConnected == false)
                 {
-                    Close();
+                    Close(connIdx);
+                    connIdx = (int)ConnectionIdx.NO_IDX;
                 }
             }
             catch
             {
-                Close();
-                return false;
+                Close(connIdx);
+                return (int)ConnectionIdx.ERROR;
             }
 
-            return true;
+            return connIdx;
         }
 
         //-----------------------------------------------------------------------------------------
-        public bool SendCommand(string command, bool stayConnected = false)
+        public int SendCommand(string command, bool stayConnected = false, int connIdx = (int)ConnectionIdx.NO_IDX)
         {
             command = command + '\n';
             byte[] data = Encoding.ASCII.GetBytes(command);
-            return SendRaw(data, stayConnected);
+            return SendRaw(data, stayConnected, connIdx);
         }
 
         //-----------------------------------------------------------------------------------------
-        public byte[] GetRaw(int respondLength = 4096, bool stayConnected = false)
+        public byte[] GetRaw(int respondLength = 4096, bool stayConnected = false, int connIdx = (int)ConnectionIdx.NO_IDX)
         {
-            if (deviceStream == null)
+            if (deviceStream == null
+                && connIdx == (int)ConnectionIdx.NO_IDX)
             {
-                return null;
+                return new byte[0];
             }
 
             byte[] data = new byte[respondLength];
@@ -146,12 +211,12 @@ namespace LabToys
                 if (stayConnected == false
                     && this.stayConnected == false)
                 {
-                    Close();
+                    Close( connIdx );
                 }
             }
             catch
             {
-                Close();
+                Close( connIdx );
                 return new byte[0];
             }
 
@@ -159,9 +224,9 @@ namespace LabToys
         }
 
         //-----------------------------------------------------------------------------------------
-        public string GetAns(int respondLength = 4096, bool stayConnected = false)
+        public string GetAns(int respondLength = 4096, bool stayConnected = false, int connIdx = (int)ConnectionIdx.NO_IDX)
         {
-            byte[] data = GetRaw(respondLength, stayConnected);
+            byte[] data = GetRaw(respondLength, stayConnected, connIdx );
             if (data.Length == 0)
             {
                 return "";
@@ -172,23 +237,60 @@ namespace LabToys
         }
 
         //-----------------------------------------------------------------------------------------
-        public string SendCommandGetAns(string command, bool stayConnected = false)
+        public string SendCommandGetAns(string command, bool stayConnected = false, int connIdx = (int)ConnectionIdx.NO_IDX)
         {
-            if (SendCommand(command, true) == false)
+            connIdx = SendCommand(command, true, connIdx);
+            if (connIdx == (int)ConnectionIdx.ERROR)
             {
                 return "";
             }
-            return GetAns(1024, stayConnected);
+            return GetAns(1024, stayConnected, connIdx);
         }
 
         //-----------------------------------------------------------------------------------------
-        public byte[] SendCommandGetRaw(string command, int respondLength = 4096, bool stayConnected = false)
+        public byte[] SendCommandGetRaw(string command, int respondLength = 4096, bool stayConnected = false, int connIdx = (int)ConnectionIdx.NO_IDX)
         {
-            if (SendCommand(command, true) == false)
+            connIdx = SendCommand(command, true, connIdx);
+            if (connIdx == (int)ConnectionIdx.ERROR)
             {
                 return new byte[0];
             }
-            return GetRaw(respondLength, stayConnected);
+            return GetRaw(respondLength, stayConnected, connIdx);
         }
+
+        //-------------------------------------------------------------------------------------------------------------------------------------------
+        private void DisposeStreamSocket()
+        {
+            if (deviceStream != null)
+            {
+                deviceStream.Close();
+                deviceStream.Dispose();
+                deviceStream = null;
+            }
+
+            if (deviceSocket != null)
+            {
+                deviceSocket.Close();
+                deviceSocket.Dispose();
+                deviceSocket = null;
+            }
+        }
+
+        #region ENUM
+        //-------------------------------------------------------------------------------------------------------------------------------------------
+        //  EEEEE N   N U   U M   M
+        //  E     NN  N U   U MM MM
+        //  EEE   N N N U   U M M M
+        //  E     N  NN U   U M   M
+        //  EEEEE N   N  UUU  M   M
+        //
+        public enum ConnectionIdx
+        {
+            ACTION_ON_SOCKET    = -2,
+            ERROR               = -1,
+            NO_IDX              = 0           
+        }
+
+        #endregion
     }
 }

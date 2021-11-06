@@ -38,7 +38,7 @@ namespace LabToys.Rigol
         /// </summary>
         public bool Autoscale()
         {
-            return device.SendCommand("AUT");
+            return device.SendCommand("AUT") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -47,7 +47,7 @@ namespace LabToys.Rigol
         /// </summary>
         public bool Clear()
         {
-            return device.SendCommand("CLE");
+            return device.SendCommand("CLE") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -56,7 +56,7 @@ namespace LabToys.Rigol
         /// </summary>
         public bool Run()
         {
-            return device.SendCommand("RUN");
+            return device.SendCommand("RUN") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -65,7 +65,7 @@ namespace LabToys.Rigol
         /// </summary>
         public bool Stop()
         {
-            return device.SendCommand("STOP");
+            return device.SendCommand("STOP") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -74,7 +74,7 @@ namespace LabToys.Rigol
         /// </summary>
         public bool Single()
         {
-            return device.SendCommand("SINGLE");
+            return device.SendCommand("SINGLE") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -83,7 +83,7 @@ namespace LabToys.Rigol
         /// </summary>
         public bool TriggerForce()
         {
-            return device.SendCommand("TFOR");
+            return device.SendCommand("TFOR") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
         #endregion
 
@@ -101,7 +101,7 @@ namespace LabToys.Rigol
         /// </summary>
         public bool ClearDisplay()
         {
-            return device.SendCommand("DISP:CLE");
+            return device.SendCommand("DISP:CLE") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -112,8 +112,12 @@ namespace LabToys.Rigol
         /// <returns></returns>
         public byte[] GetScreenDataBitmap()
         {
-            if (device.Connect() == false) return new byte[0];
-            if (device.SendCommand("DISP:DATA?") == false) return new byte[0];
+            int connIdx = device.Connect();
+            if (connIdx == (int)SCPIsocket.ConnectionIdx.ERROR) return new byte[0];
+
+            connIdx = device.SendCommand("DISP:DATA?", false, connIdx );
+            if (connIdx == (int)SCPIsocket.ConnectionIdx.ERROR) return new byte[0];
+
             string header = device.GetAns(2);                                                       //get begin of header #x - where x is length of rest of header
             if (header.Length == 0) return new byte[0];
 
@@ -171,7 +175,7 @@ namespace LabToys.Rigol
         /// <param name="type"></param>
         public bool SetDisplayType(DisplayType type = DisplayType.VECTORS)
         {
-            return device.SendCommand("DISP:TYPE " + DisplayTypeString[(int)type]);
+            return device.SendCommand("DISP:TYPE " + DisplayTypeString[(int)type]) == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -219,7 +223,7 @@ namespace LabToys.Rigol
         /// </summary>
         public bool ClearStatus()
         {
-            return device.SendCommand("*CLS");
+            return device.SendCommand("*CLS") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -228,7 +232,7 @@ namespace LabToys.Rigol
         /// </summary>
         public bool EnableOperationComplete()
         {
-            return device.SendCommand("*OPC");
+            return device.SendCommand("*OPC") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------
@@ -254,7 +258,7 @@ namespace LabToys.Rigol
         /// </summary>
         public bool RestoreToDefaultState()
         {
-            return device.SendCommand("*RST");
+            return device.SendCommand("*RST") == (int)SCPIsocket.ConnectionIdx.NO_IDX ? true : false;
         }
 
         //-----------------------------------------------------------------------------------------

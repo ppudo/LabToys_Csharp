@@ -20,10 +20,10 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {873493A6-CB57-49CD-BD3A-2C6A9766270F}
-		BuildVersion_StartDate = 2021/10/25
-		BuildVersion_BuildVersioningStyle = None.None.None.Increment
-		BuildVersion_UpdateAssemblyVersion = True
 		BuildVersion_UpdateFileVersion = True
+		BuildVersion_UpdateAssemblyVersion = True
+		BuildVersion_BuildVersioningStyle = None.None.None.Increment
+		BuildVersion_StartDate = 2021/10/25
+		SolutionGuid = {873493A6-CB57-49CD-BD3A-2C6A9766270F}
 	EndGlobalSection
 EndGlobal

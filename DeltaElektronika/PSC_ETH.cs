@@ -873,6 +873,7 @@ namespace LabToys.DeltaElektronika
 
         public bool RefreshDeviceStatus( bool closeConnection=true )
         {
+            //start connection or restore from free
             refreshConnIdx = device.Connect(refreshConnIdx);
             if (refreshConnIdx == (int)SCPIsocket.ConnectionIdx.ERROR)
             {
@@ -880,6 +881,7 @@ namespace LabToys.DeltaElektronika
                 return false;
             }
 
+            //get status
             status.measuredVoltage = MeasureOutputVoltage( refreshConnIdx );
             status.measuredCurrent = MeasureOutputCurrent( refreshConnIdx );
             status.CalculateOutputPower();
@@ -893,6 +895,7 @@ namespace LabToys.DeltaElektronika
                 status.sequenceStatus = GetSequenceStatus( refreshConnIdx );
             }
 
+            //close connection or go to free
             if( closeConnection )
             {
                 device.Close( refreshConnIdx );

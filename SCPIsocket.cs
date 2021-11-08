@@ -13,7 +13,7 @@ namespace LabToys
     {
         private string hostIP = "localhost";
         private int hostPort = 5025;
-        private bool stayConnected = false;
+        private List<int> stayConnected = new List<int>();
         private int timeout = 10000;
         private int sendDelay = 1;
         private TcpClient deviceSocket = null;
@@ -27,6 +27,9 @@ namespace LabToys
 
         public int Timeout { get => timeout; set => timeout = value; }
         public int SendDelay { get => sendDelay; set => sendDelay = value; }
+        public string HostIP { get => hostIP; }
+        public int HostPort { get => hostPort; }
+
 
         //-------------------------------------------------------------------------------------------------------------------------------------------
         /// <summary>
@@ -48,9 +51,12 @@ namespace LabToys
             //recall old socket idx if oldIdx is in use
             if ( oldIdx != (int)ConnectionIdx.NO_IDX )
             {
-                if( freeConnectionList.Remove(oldIdx) == true )
+                if( freeConnectionList.Contains(oldIdx) == true )
                 {
                     idx = oldIdx;
+                    connectionList.Add(idx);
+                    freeConnectionList.Remove(idx);
+                    //Console.WriteLine("Get from free: " + idx.ToString());
                 }
             }
 
@@ -67,6 +73,10 @@ namespace LabToys
                 }
                 while (connectionList.Contains(idxConnectionCounter)
                         || freeConnectionList.Contains(idxConnectionCounter));
+
+                idx = idxConnectionCounter;
+                connectionList.Add(idx);
+                //Console.WriteLine("Create new idx: " + idx.ToString());
             }
      
             //create socket if there is no socket
@@ -77,18 +87,26 @@ namespace LabToys
                     deviceSocket = new TcpClient(hostIP, hostPort);
                     deviceSocket.ReceiveTimeout = timeout;
                     deviceStream = deviceSocket.GetStream();
-                    this.stayConnected = stayConnected;
-
-                    currentConnectionIdx = idx;
                 }
                 catch
                 {
+                    connectionList.Remove(idx);
                     DisposeStreamSocket();
                     return (int)ConnectionIdx.ERROR;
                 }
             }
 
-            connectionList.Add(idx);
+            //save stay connected state
+            if (stayConnected)
+            {
+                this.stayConnected.Add(idx);
+            }
+
+            if ( currentConnectionIdx == (int)ConnectionIdx.NO_IDX )
+            {
+                currentConnectionIdx = idx;
+            }
+            
             return idx;
         }
 
@@ -123,6 +141,11 @@ namespace LabToys
                     currentConnectionIdx = (int)ConnectionIdx.NO_IDX;
                 }
             }
+
+            //remove this index from stayconnected idx's
+            this.stayConnected.Remove(connIdx);
+
+            //Console.WriteLine("Close idx: " + connIdx.ToString());
         }
 
         //-----------------------------------------------------------------------------------------
@@ -146,6 +169,8 @@ namespace LabToys
                     currentConnectionIdx = (int)ConnectionIdx.NO_IDX;
                 }
             }
+
+            //Console.WriteLine("Free idx: " + connIdx.ToString());
         }
 
         //-----------------------------------------------------------------------------------------
@@ -170,8 +195,8 @@ namespace LabToys
             {
                 deviceStream.Write(data, 0, data.Length);
                 Thread.Sleep(this.sendDelay);
-                if (stayConnected == false
-                    && this.stayConnected == false)
+                if (stayConnected == false                                                          //close connection only when it is not required to saty connected and all other connection do not requre to stay connected
+                    && !this.stayConnected.Contains(connIdx))
                 {
                     Close(connIdx);
                     connIdx = (int)ConnectionIdx.NO_IDX;
@@ -208,8 +233,8 @@ namespace LabToys
             {
                 int bytes = deviceStream.Read(data, 0, data.Length);
                 Array.Resize(ref data, bytes);
-                if (stayConnected == false
-                    && this.stayConnected == false)
+                if (stayConnected == false                                                          //close connection only when it is not required to saty connected and all other connection do not requre to stay connected
+                    && !this.stayConnected.Contains( connIdx ) )
                 {
                     Close( connIdx );
                 }
@@ -274,6 +299,8 @@ namespace LabToys
                 deviceSocket.Dispose();
                 deviceSocket = null;
             }
+
+            //Console.WriteLine("Dispose stream");
         }
 
         #region ENUM

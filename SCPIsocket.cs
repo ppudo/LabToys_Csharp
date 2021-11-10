@@ -18,6 +18,7 @@ namespace LabToys
         private int sendDelay = 1;
         private TcpClient deviceSocket = null;
         private NetworkStream deviceStream = null;
+        private string lineEnding = "\n";
 
         private int idxConnectionCounter = 0;
         private List<int> connectionList = new List<int>();
@@ -29,6 +30,7 @@ namespace LabToys
         public int SendDelay { get => sendDelay; set => sendDelay = value; }
         public string HostIP { get => hostIP; }
         public int HostPort { get => hostPort; }
+        public string LineEnding { get => lineEnding; set => lineEnding = value; }
 
 
         //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -214,7 +216,7 @@ namespace LabToys
         //-----------------------------------------------------------------------------------------
         public int SendCommand(string command, bool stayConnected = false, int connIdx = (int)ConnectionIdx.NO_IDX)
         {
-            command = command + '\n';
+            command = command + lineEnding;
             byte[] data = Encoding.ASCII.GetBytes(command);
             return SendRaw(data, stayConnected, connIdx);
         }
@@ -258,18 +260,23 @@ namespace LabToys
             }
 
             string response = Encoding.ASCII.GetString(data);
-            return response.Substring( 0, response.Length-1 );
+            if( response.EndsWith(lineEnding) )
+            {
+                return response.Substring(0, response.Length - lineEnding.Length);
+            }
+
+            return response;
         }
 
         //-----------------------------------------------------------------------------------------
-        public string SendCommandGetAns(string command, bool stayConnected = false, int connIdx = (int)ConnectionIdx.NO_IDX)
+        public string SendCommandGetAns(string command, int respondLength=1024, bool stayConnected = false, int connIdx = (int)ConnectionIdx.NO_IDX)
         {
             connIdx = SendCommand(command, true, connIdx);
             if (connIdx == (int)ConnectionIdx.ERROR)
             {
                 return "";
             }
-            return GetAns(1024, stayConnected, connIdx);
+            return GetAns(respondLength, stayConnected, connIdx);
         }
 
         //-----------------------------------------------------------------------------------------

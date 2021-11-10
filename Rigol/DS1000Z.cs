@@ -118,11 +118,11 @@ namespace LabToys.Rigol
             connIdx = device.SendCommand("DISP:DATA?", false, connIdx );
             if (connIdx == (int)SCPIsocket.ConnectionIdx.ERROR) return new byte[0];
 
-            string header = device.GetAns(2);                                                       //get begin of header #x - where x is length of rest of header
+            string header = device.GetAns(2, false, connIdx);                                       //get begin of header #x - where x is length of rest of header
             if (header.Length == 0) return new byte[0];
 
-            int headerLen = header[1] - '0';                                                          //convert string to int
-            header = device.GetAns(headerLen);
+            int headerLen = header[1] - '0';                                                        //convert string to int
+            header = device.GetAns(headerLen, false, connIdx);
             if (header.Length == 0) return new byte[0];
             int length = int.Parse(header) + 1;                                                     //get rest of heder info - this is length of bytes in stream with screen data +ending \n
 
@@ -131,12 +131,13 @@ namespace LabToys.Rigol
             int receivedBytes = 0;
             while (receivedBytes < length)
             {
-                byte[] data = device.GetRaw(length - receivedBytes);
+                byte[] data = device.GetRaw(length - receivedBytes, false, connIdx);
                 if (data.Length == 0) return new byte[0];
                 Array.Copy(data, 0, screenData, receivedBytes, data.Length);
                 receivedBytes += data.Length;
             }
 
+            device.Close(connIdx);
             Array.Resize(ref screenData, screenData.Length - 1);                                    //remove /n from end of stream
             return screenData;
         }

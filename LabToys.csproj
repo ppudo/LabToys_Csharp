@@ -41,6 +41,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CTS\ASCII_Proto_ETH.cs" />
     <Compile Include="DeltaElektronika\PSC_ETH.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rigol\DS1000Z.cs" />
@@ -49,7 +50,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>
     <VisualStudio>
-      <UserProperties BuildVersion_UpdateFileVersion="True" BuildVersion_UpdateAssemblyVersion="True" BuildVersion_BuildVersioningStyle="None.None.None.Increment" BuildVersion_StartDate="2021/10/25" />
+      <UserProperties BuildVersion_StartDate="2021/10/25" BuildVersion_BuildVersioningStyle="None.None.None.Increment" BuildVersion_UpdateAssemblyVersion="True" BuildVersion_UpdateFileVersion="True" />
     </VisualStudio>
   </ProjectExtensions>
 </Project>

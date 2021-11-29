@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LabToys.CTS
 {
-    class ASCII_Proto_ETH
+    public class ASCII_Proto_ETH
     {
         private SCPIsocket device = null;
 
